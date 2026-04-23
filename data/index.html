@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🕒</text></svg>'>
+    <title>LED Clock Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕐 LED Clock Settings</h1>
+            <p>Configure your display and WiFi settings</p>
+        </div>
+
+        <div class="section">
+            <h2>📡 WiFi Configuration</h2>
+            <div class="status-box">
+                <p><strong>Current SSID:</strong> %CURRENT_SSID%</p>
+                <p><strong>Status:</strong> %WIFI_STATUS%</p>
+            </div>
+
+            <div class="form-group">
+                <label for="ssid">WiFi Network (SSID)</label>
+                <input type="text" id="ssid" name="ssid" placeholder="Enter WiFi SSID">
+            </div>
+
+            <div class="form-group">
+                <label for="password">WiFi Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter WiFi Password">
+            </div>
+
+            <button onclick="saveWiFi()">💾 Save WiFi & Reboot</button>
+        </div>
+
+        <div class="section">
+            <h2>⏰ Time Settings</h2>
+            <div class="form-group">
+                <label for="timeOffset">Time Zone Offset (seconds from UTC)</label>
+                <input type="number" id="timeOffset" name="timeOffset" value="%TIME_OFFSET%" step="3600"
+                    oninput="updateSunTimesUI()">
+                <small>Current: %TIME_OFFSET% seconds</small>
+            </div>
+
+            <div class="form-group">
+                <label>Quick Timezone Selection</label>
+                <select onchange="setQuickTimezone(this.value)">
+                    <option value="">-- Select timezone --</option>
+                    <option value="-28800">GMT-8 (PST)</option>
+                    <option value="-18000">GMT-5 (EST)</option>
+                    <option value="0">GMT+0 (UTC/London)</option>
+                    <option value="10800">GMT+3 (Moscow)</option>
+                    <option value="14400">GMT+4 (Dubai)</option>
+                    <option value="19800">GMT+5:30 (India)</option>
+                    <option value="25200" selected>GMT+7 (Jakarta/Bangkok)</option>
+                    <option value="28800">GMT+8 (Singapore/Kuala Lumpur)</option>
+                    <option value="32400">GMT+9 (Tokyo)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💡 Brightness Settings</h2>
+
+            <div class="form-group">
+                <label for="brightnessMode">Brightness Mode</label>
+                <select id="brightnessMode" name="brightnessMode" onchange="toggleBrightnessMode()">
+                    <option value="manual">Manual (Set Your Own Times)</option>
+                    <option value="auto">Auto (Sunrise/Sunset Based)</option>
+                </select>
+                <small id="modeDescription">Manual: You choose times and brightness. Auto: Uses sunrise/sunset
+                    times.</small>
+            </div>
+
+            <div id="manualBrightness">
+                <div class="form-group">
+                    <label for="dayStartHour">Day Mode Starts At (Hour)</label>
+                    <input type="number" id="dayStartHour" name="dayStartHour" min="0" max="23"
+                        value="%DAY_START_HOUR%">
+                    <small>Hour when day brightness starts (0-23, e.g., 6 for 6AM)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="nightStartHour">Night Mode Starts At (Hour)</label>
+                    <input type="number" id="nightStartHour" name="nightStartHour" min="0" max="23"
+                        value="%NIGHT_START_HOUR%">
+                    <small>Hour when night brightness starts (0-23, e.g., 18 for 6PM)</small>
+                </div>
+
+                <div class="brightness-controls">
+                    <div class="form-group">
+                        <label for="dayBrightness">Day Brightness</label>
+                        <input type="number" id="dayBrightness" name="dayBrightness" min="0" max="15"
+                            value="%DAY_BRIGHTNESS%">
+                    </div>
+                    <div class="form-group">
+                        <label for="nightBrightness">Night Brightness</label>
+                        <input type="number" id="nightBrightness" name="nightBrightness" min="0" max="15"
+                            value="%NIGHT_BRIGHTNESS%">
+                    </div>
+                </div>
+            </div>
+
+            <div id="autoSettings" style="display: none;">
+
+                <div class="status-box">
+                    <p><strong>Calculated Times for Today</strong></p>
+                    <p class="info-text" style="margin-top: 0;">Updates automatically based on coordinates below</p>
+                    <div class="sun-times">
+                        <div class="sun-time-box">🌅 Sunrise<br><span id="calcSunrise"
+                                style="font-size: 18px; color: #667eea;">--:--</span></div>
+                        <div class="sun-time-box">🌇 Sunset<br><span id="calcSunset"
+                                style="font-size: 18px; color: #667eea;">--:--</span></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="latitude">Latitude</label>
+                    <input type="number" id="latitude" name="latitude" step="0.0001" value="%LATITUDE%"
+                        oninput="updateSunTimesUI()">
+                    <small>Your location latitude (e.g., -7.2575 for Surabaya)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="longitude">Longitude</label>
+                    <input type="number" id="longitude" name="longitude" step="0.0001" value="%LONGITUDE%"
+                        oninput="updateSunTimesUI()">
+                    <small>Your location longitude (e.g., 112.7521 for Surabaya)</small>
+                </div>
+
+                <div class="brightness-controls">
+                    <div class="form-group">
+                        <label for="dayBrightnessAuto">Day Brightness (Sunrise to Sunset)</label>
+                        <input type="number" id="dayBrightnessAuto" name="dayBrightnessAuto" min="0" max="15"
+                            value="%DAY_BRIGHTNESS%">
+                    </div>
+                    <div class="form-group">
+                        <label for="nightBrightnessAuto">Night Brightness (Sunset to Sunrise)</label>
+                        <input type="number" id="nightBrightnessAuto" name="nightBrightnessAuto" min="0" max="15"
+                            value="%NIGHT_BRIGHTNESS%">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📅 Calendar Display</h2>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="showPasaran" name="showPasaran" checked>
+                <label for="showPasaran">Show Pasaran (Javanese) Days</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="showHijri" name="showHijri" checked onchange="toggleHijriOffset()">
+                <label for="showHijri">Show Hijri (Islamic) Calendar</label>
+            </div>
+            <div id="hijriOffsetWrapper" class="form-group"
+                style="display: none; margin-left: 30px; margin-top: -5px; margin-bottom: 15px;">
+                <label for="hijriOffset">Hijri Date Adjustment (Days)</label>
+                <input type="number" id="hijriOffset" name="hijriOffset" min="-2" max="2" value=%HIJRI_OFFSET%>
+                <small>Adjust local moon sighting differences (-2 to +2 days)</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <button onclick="saveAllSettings()">💾 Save All Display Settings</button>
+            <p class="info-text" style="text-align: center; margin-top: 10px;">
+                Settings will be applied immediately (no reboot required)
+            </p>
+        </div>
+
+        <div id="toast"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
