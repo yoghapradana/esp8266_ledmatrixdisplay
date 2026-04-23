@@ -52,4 +52,5 @@ struct DisplaySettings {
   int32_t timeOffset = 25200;   // GMT+7 default (seconds)
 
   int8_t hijriOffset = 0; // User-defined offset for Hijri date (in days)
+  bool is24h = true; // 24-hour format by default
 };

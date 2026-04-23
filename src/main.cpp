@@ -37,7 +37,7 @@ NTPClient timeClient(ntpUDP, NTP_SERVER, 0, 60000); // Initial offset is UTC, wi
 DisplaySettings settings;                           // Global settings struct
 
 // Variables
-char timeStr[6] = "00:00"; // HH:MM format with blinking colon
+char timeStr[7] = "00:00"; // HH:MM format with blinking colon + extra char for a/p indicator
 char dateStr[120] = "";    // For full date text
 bool colonVisible = true;
 bool otaActive = false;
@@ -446,10 +446,31 @@ void showCustomMessage()
 void animateClock()
 {
   colonVisible = !colonVisible;
-  snprintf(timeStr, sizeof(timeStr), "%02d%c%02d",
-           hour(),
-           colonVisible ? ':' : ' ',
-           minute());
+
+  int h = hour();
+  char ampm = (h >= 12) ? 'p' : 'a'; // Determine AM/PM
+  if (!settings.is24h)
+  {
+    h = h % 12;
+    if (h == 0)
+      h = 12;
+
+    // Format: "12:05a" or "12 05a"
+    // Using a narrow font helps this fit on 32 columns
+    snprintf(timeStr, sizeof(timeStr), "%d%c%02d%c",
+             h,
+             colonVisible ? ':' : ' ',
+             minute(),
+             ampm);
+  }
+  else
+  {
+    // Standard 24h: "23:05"
+    snprintf(timeStr, sizeof(timeStr), "%02d%c%02d",
+             h,
+             colonVisible ? ':' : ' ',
+             minute());
+  }
 }
 
 void animateDate()
@@ -772,6 +793,11 @@ void setupWebServer()
           if (doc["long"].is<float>())
             settings.longitude = doc["long"];
 
+          if (doc["is24"].is<bool>())
+          {
+            settings.is24h = doc["is24"];
+          }
+
           // IMPORTANT: Send response BEFORE potentially heavy EEPROM/Update functions
           request->send(200, "text/plain", "OK");
           delay(10); // Small delay to ensure response is sent before we do heavy lifting
@@ -801,7 +827,7 @@ void setupWebServer()
     doc["showPsr"] = settings.showPasaran;
     doc["hjrOft"] = settings.hijriOffset;
     doc["tmOft"] = settings.timeOffset;
-
+    doc["is24"] = settings.is24h;
     String output;
     serializeJson(doc, output);
     request->send(200, "application/json", output); });

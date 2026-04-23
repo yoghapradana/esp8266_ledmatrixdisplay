@@ -107,6 +107,7 @@ function saveAllSettings() {
         showHjr: document.getElementById('showHijri').checked,
         showPsr: document.getElementById('showPasaran').checked,
         tmOft: parseInt(document.getElementById('timeOffset').value),
+        is24: document.getElementById('is24').checked
     };
 
     if (document.getElementById('showHijri').checked) {
@@ -153,6 +154,7 @@ window.onload = function () {
             document.getElementById('hijriOffset').value = data.hjrOft || 0;
             document.getElementById('showPasaran').checked = data.showPsr !== false;
             document.getElementById('timeOffset').value = data.tmOft || 25200;
+            document.getElementById('is24').checked = data.is24 || true;
 
             toggleBrightnessMode();
             updateSunTimesUI();
