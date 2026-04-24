@@ -37,13 +37,14 @@ NTPClient timeClient(ntpUDP, NTP_SERVER, 0, 60000); // Initial offset is UTC, wi
 DisplaySettings settings;                           // Global settings struct
 
 // Variables
-char timeStr[7] = "00:00"; // HH:MM format with blinking colon + extra char for a/p indicator
+char timeStr[20] = "00:00"; // HH:MM format with blinking colon + extra char for a/p indicator
 char dateStr[120] = "";    // For full date text
 bool colonVisible = true;
 bool otaActive = false;
 bool showingDate = false;
 bool showingCustomMessage = false;
 bool reqHijriFetch = false;
+bool reqSaveSettings = false;
 String customMessage = "";
 uint8_t customMessageRotations = 0;
 uint8_t currentRotation = 0;
@@ -198,6 +199,16 @@ void loop()
     }
   }
   // --- END HIJRI FETCH BLOCK ---
+
+  if (reqSaveSettings)
+  {
+    yield(); // Yield to ensure we don't block other operations
+    saveSettings();
+    updateBrightness();
+    updateDate();
+    reqSaveSettings = false;
+    yield(); // Yield again after updates
+  }
 
   if (showingCustomMessage)
   {
@@ -768,11 +779,11 @@ void setupWebServer()
               reqHijriFetch = true; // Trigger a fetch with the new offset
             }
           }
-          if (doc["dayBrt"].is<int>())
-            settings.dayBrightness = doc["dayBrt"];
+          if (doc["dBrt"].is<int>())
+            settings.dayBrightness = doc["dBrt"];
 
-          if (doc["nightBrt"].is<int>())
-            settings.nightBrightness = doc["nightBrt"];
+          if (doc["ntBrt"].is<int>())
+            settings.nightBrightness = doc["ntBrt"];
 
           if (doc["dSH"].is<int>())
             settings.dayStartHour = doc["dSH"];
@@ -803,9 +814,8 @@ void setupWebServer()
           delay(10); // Small delay to ensure response is sent before we do heavy lifting
 
           // Now perform the hardware updates
-          saveSettings();
-          updateBrightness();
-          updateDate();
+          reqSaveSettings = true; // Flag to indicate we need to save settings after response
+          
         }
         else
         {
@@ -817,8 +827,8 @@ void setupWebServer()
             {
     JsonDocument doc;
     doc["brtMode"] = settings.brightnessMode;
-    doc["dayBrt"] = settings.dayBrightness;
-    doc["nightBrt"] = settings.nightBrightness;
+    doc["dBrt"] = settings.dayBrightness;
+    doc["ntBrt"] = settings.nightBrightness;
     doc["dSH"] = settings.dayStartHour;
     doc["nSN"] = settings.nightStartHour;
     doc["lat"] = settings.latitude;

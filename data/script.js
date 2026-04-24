@@ -107,7 +107,7 @@ function saveAllSettings() {
         showHjr: document.getElementById('showHijri').checked,
         showPsr: document.getElementById('showPasaran').checked,
         tmOft: parseInt(document.getElementById('timeOffset').value),
-        is24: document.getElementById('is24').checked
+        is24: document.getElementById('is24h').checked
     };
 
     if (document.getElementById('showHijri').checked) {
@@ -116,14 +116,14 @@ function saveAllSettings() {
 
     if (mode === 'manual') {
         settings.dSH = parseInt(document.getElementById('dayStartHour').value);
-        settings.nSN = parseInt(document.getElementById('nightStartHour').value);
-        settings.dayBrt = parseInt(document.getElementById('dayBrightness').value);
-        settings.nightBrt = parseInt(document.getElementById('nightBrightness').value);
+        settings.nSH = parseInt(document.getElementById('nightStartHour').value);
+        settings.dBrt = parseInt(document.getElementById('dayBrightness').value);
+        settings.ntBrt = parseInt(document.getElementById('nightBrightness').value);
     } else {
         settings.lat = parseFloat(document.getElementById('latitude').value).toFixed(4);
         settings.long = parseFloat(document.getElementById('longitude').value).toFixed(4);
-        settings.dayBrt = parseInt(document.getElementById('dayBrightnessAuto').value);
-        settings.nightBrt = parseInt(document.getElementById('nightBrightnessAuto').value);
+        settings.dBrt = parseInt(document.getElementById('dayBrightnessAuto').value);
+        settings.ntBrt = parseInt(document.getElementById('nightBrightnessAuto').value);
     }
 
     fetch('/settings', {
@@ -131,8 +131,21 @@ function saveAllSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
     })
-        .then(() => showMessage('Settings saved successfully!', 'success'))
-        .catch(() => showMessage('Failed to save settings', 'error'));
+        .then(response => {
+            if (!response.ok) {
+                // This triggers if the server sends 400 (JSON Error)
+                throw new Error('Server returned ' + response.status);
+            }
+            return response.text();
+        })
+        .then(() => {
+            showMessage('Settings saved successfully!', 'success');
+        })
+        .catch((error) => {
+            // This now catches BOTH network failures AND the 400 error from above
+            console.error('Save failed:', error);
+            showMessage('Failed to save settings: ' + error.message, 'error');
+        });
 }
 
 window.onload = function () {
@@ -142,19 +155,19 @@ window.onload = function () {
             document.getElementById('brightnessMode').value = data.brtMode ? 'auto' : 'manual';
             document.getElementById('dayStartHour').value = data.dSH || 6;
             document.getElementById('nightStartHour').value = data.nSH || 18;
-            document.getElementById('dayBrightness').value = data.dayBrt || 8;
-            document.getElementById('nightBrightness').value = data.nightBrt || 1;
+            document.getElementById('dayBrightness').value = data.dBrt || 8;
+            document.getElementById('nightBrightness').value = data.ntBrt || 1;
 
             document.getElementById('latitude').value = data.lat || -7.2575;
             document.getElementById('longitude').value = data.long || 112.7521;
-            document.getElementById('dayBrightnessAuto').value = data.dayBrt || 8;
-            document.getElementById('nightBrightnessAuto').value = data.nightBrt || 1;
+            document.getElementById('dayBrightnessAuto').value = data.dBrt || 8;
+            document.getElementById('nightBrightnessAuto').value = data.ntBrt || 1;
 
             document.getElementById('showHijri').checked = data.showHjr !== false;
             document.getElementById('hijriOffset').value = data.hjrOft || 0;
             document.getElementById('showPasaran').checked = data.showPsr !== false;
             document.getElementById('timeOffset').value = data.tmOft || 25200;
-            document.getElementById('is24').checked = data.is24 || true;
+            document.getElementById('is24h').checked = data.is24 !== false;
 
             toggleBrightnessMode();
             updateSunTimesUI();
