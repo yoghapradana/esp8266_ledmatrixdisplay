@@ -122,8 +122,8 @@ function saveAllSettings() {
     } else {
         settings.lat = parseFloat(document.getElementById('latitude').value).toFixed(4);
         settings.long = parseFloat(document.getElementById('longitude').value).toFixed(4);
-        settings.dBrt = parseInt(document.getElementById('dayBrightnessAuto').value);
-        settings.ntBrt = parseInt(document.getElementById('nightBrightnessAuto').value);
+        settings.dBrt = parseInt(document.getElementById('dayBrightness').value);
+        settings.ntBrt = parseInt(document.getElementById('nightBrightness').value);
     }
 
     fetch('/settings', {
@@ -160,8 +160,6 @@ window.onload = function () {
 
             document.getElementById('latitude').value = data.lat || -7.2575;
             document.getElementById('longitude').value = data.long || 112.7521;
-            document.getElementById('dayBrightnessAuto').value = data.dBrt || 8;
-            document.getElementById('nightBrightnessAuto').value = data.ntBrt || 1;
 
             document.getElementById('showHijri').checked = data.showHjr !== false;
             document.getElementById('hijriOffset').value = data.hjrOft || 0;
@@ -189,5 +187,33 @@ function toggleHijriOffset() {
         offsetWrapper.style.display = 'block';
     } else {
         offsetWrapper.style.display = 'none';
+    }
+}
+
+function validate(el, isFloat) {
+    // 1. Store cursor position and original value
+    const start = el.selectionStart;
+    const oldVal = el.value;
+
+    // 2. Clean the string: allow only 0-9, one dot (if float), and one leading minus
+    let val = el.value.replace(isFloat ? /[^0-9.\-]/g : /[^0-9\-]/g, '');
+
+    // 3. Logic to prevent multiple dots
+    if (isFloat) {
+        const parts = val.split('.');
+        if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+    }
+
+    // 4. Logic to prevent multiple/misplaced minus signs
+    if (val.includes('-')) {
+        val = (val.startsWith('-') ? '-' : '') + val.replace(/-/g, '');
+    }
+
+    // 5. Update the field only if it's different to prevent loops
+    if (oldVal !== val) {
+        el.value = val;
+        // Restore cursor (adjusted if a character was removed)
+        const adj = val.length < oldVal.length ? -1 : 0;
+        el.setSelectionRange(start + adj, start + adj);
     }
 }
