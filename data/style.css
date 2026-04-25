@@ -81,9 +81,19 @@
             font-size: 14px;
         }
 
+        input[type="time"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
         input[type="text"]:focus,
         input[type="password"]:focus,
         input[type="number"]:focus,
+        input[type="time"]:focus,
         select:focus {
             outline: none;
             border-color: #667eea;
@@ -138,6 +148,13 @@
 
         button:active {
             transform: scale(0.98);
+        }
+
+        .manual-time-settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
         }
 
         .status-box {

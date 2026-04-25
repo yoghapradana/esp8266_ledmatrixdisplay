@@ -83,19 +83,20 @@
             </div>
 
             <div id="manualBrightness">
-                <div class="form-group">
-                    <label for="dayStartHour">Day Mode Starts At (Hour)</label>
-                    <input type="text" id="dayStartHour" name="dayStartHour" min="0" max="23" value="%DAY_START_HOUR%"
-                        inputmode="numeric" oninput="validate(this, false)">
+                <div class="manual-time-settings">
+                    <div class="form-group">
+                        <label for="dayStartTime">Day Mode Starts At</label>
+                        <input type="time" id="dayStartTime" name="dayStartTime" value="%DAY_START_TIME%"
+                            inputmode="numeric">
+                        <small>Time when day brightness starts</small>
+                    </div>
 
-                    <small>Hour when day brightness starts (0-23, e.g., 6 for 6AM)</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="nightStartHour">Night Mode Starts At (Hour)</label>
-                    <input type="text" id="nightStartHour" name="nightStartHour" min="0" max="23"
-                        value="%NIGHT_START_HOUR%" inputmode="numeric" oninput="validate(this, false)">
-                    <small>Hour when night brightness starts (0-23, e.g., 18 for 6PM)</small>
+                    <div class="form-group">
+                        <label for="nightStartTime">Night Mode Starts At</label>
+                        <input type="time" id="nightStartTime" name="nightStartTime" value="%NIGHT_START_TIME%"
+                            inputmode="numeric">
+                        <small>Time when night brightness starts</small>
+                    </div>
                 </div>
             </div>
 
@@ -129,8 +130,8 @@
             <div class="brightness-controls">
                 <div class="form-group">
                     <label for="dayBrightness">Day Brightness</label>
-                    <input type="text" id="dayBrightness" name="dayBrightness" min="0" max="15"
-                        value="%DAY_BRIGHTNESS%" inputmode="numeric" oninput="validate(this, false)">
+                    <input type="text" id="dayBrightness" name="dayBrightness" min="0" max="15" value="%DAY_BRIGHTNESS%"
+                        inputmode="numeric" oninput="validate(this, false)">
                 </div>
                 <div class="form-group">
                     <label for="nightBrightness">Night Brightness</label>
@@ -154,7 +155,8 @@
             <div id="hijriOffsetWrapper" class="form-group"
                 style="display: none; margin-left: 30px; margin-top: -5px; margin-bottom: 15px;">
                 <label for="hijriOffset">Hijri Date Adjustment (Days)</label>
-                <input type="text" id="hijriOffset" name="hijriOffset" min="-2" max="2" value=%HIJRI_OFFSET% inputmode="numeric" oninput="validate(this, false)">
+                <input type="text" id="hijriOffset" name="hijriOffset" min="-2" max="2" value=%HIJRI_OFFSET%
+                    inputmode="numeric" oninput="validate(this, false)">
                 <small>Adjust local moon sighting differences (-2 to +2 days)</small>
             </div>
         </div>

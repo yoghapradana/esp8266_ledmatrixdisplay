@@ -81,22 +81,36 @@ function showMessage(message, type) {
 function saveWiFi() {
     const ssid = document.getElementById('ssid').value;
     const password = document.getElementById('password').value;
-    if (!ssid || !password) return showMessage('Please enter both SSID and password', 'error');
+    
+    if (!ssid) return showMessage('Please enter an SSID', 'error');
 
-    const formData = new FormData();
-    formData.append('ssid', ssid);
-    formData.append('password', password);
+    // Create a plain object
+    const data = {
+        ssid: ssid,
+        password: password
+    };
 
-    fetch('/save', { method: 'POST', body: formData })
-        .then(() => {
-            showMessage('WiFi settings saved! Device rebooting...', 'success');
-            let count = 5;
-            const timer = setInterval(() => {
-                showMessage(`Rebooting in ${count--} seconds...`, 'success');
-                if (count < 0) { clearInterval(timer); location.reload(); }
-            }, 1000);
-        })
-        .catch(() => showMessage('Failed to save WiFi settings', 'error'));
+    fetch('/saveCredentials', { 
+        method: 'POST', 
+        headers: {
+            'Content-Type': 'application/json' // Crucial: tells the ESP what to expect
+        },
+        body: JSON.stringify(data) 
+    })
+    .then(response => {
+        if (!response.ok) throw new Error();
+        
+        showMessage('WiFi settings saved! Device rebooting...', 'success');
+        let count = 5;
+        const timer = setInterval(() => {
+            showMessage(`Rebooting in ${count--} seconds...`, 'success');
+            if (count < 0) { 
+                clearInterval(timer); 
+                location.reload(); 
+            }
+        }, 1000);
+    })
+    .catch(() => showMessage('Failed to save WiFi settings', 'error'));
 }
 
 function saveAllSettings() {
@@ -115,8 +129,10 @@ function saveAllSettings() {
     }
 
     if (mode === 'manual') {
-        settings.dSH = parseInt(document.getElementById('dayStartHour').value);
-        settings.nSH = parseInt(document.getElementById('nightStartHour').value);
+        settings.dSH = parseInt(document.getElementById('dayStartTime').value.split(':')[0]);
+        settings.dSM = parseInt(document.getElementById('dayStartTime').value.split(':')[1]);
+        settings.nSH = parseInt(document.getElementById('nightStartTime').value.split(':')[0]);
+        settings.nSM = parseInt(document.getElementById('nightStartTime').value.split(':')[1]);
         settings.dBrt = parseInt(document.getElementById('dayBrightness').value);
         settings.ntBrt = parseInt(document.getElementById('nightBrightness').value);
     } else {
@@ -153,8 +169,9 @@ window.onload = function () {
         .then(response => response.json())
         .then(data => {
             document.getElementById('brightnessMode').value = data.brtMode ? 'auto' : 'manual';
-            document.getElementById('dayStartHour').value = data.dSH || 6;
-            document.getElementById('nightStartHour').value = data.nSH || 18;
+            // Add padStart(2, '0') to the Hour part
+document.getElementById('dayStartTime').value = `${String(data.dSH || 6).padStart(2, '0')}:${String(data.dSM || 0).padStart(2, '0')}`;
+document.getElementById('nightStartTime').value = `${String(data.nSH || 18).padStart(2, '0')}:${String(data.nSM || 0).padStart(2, '0')}`;
             document.getElementById('dayBrightness').value = data.dBrt || 8;
             document.getElementById('nightBrightness').value = data.ntBrt || 1;
 

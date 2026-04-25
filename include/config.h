@@ -44,7 +44,9 @@ struct DisplaySettings {
   uint8_t dayBrightness = 8;
   uint8_t nightBrightness = 1;
   uint8_t dayStartHour = 6;     // Hour when day mode starts
+  uint8_t dayStartMinute = 0;   // Minute when day mode starts
   uint8_t nightStartHour = 18;  // Hour when night mode starts
+  uint8_t nightStartMinute = 0; // Minute when night mode starts
   float latitude = -7.2575;     // Surabaya default
   float longitude = 112.7521;   // Surabaya default
   bool showHijri = true;
@@ -53,4 +55,9 @@ struct DisplaySettings {
 
   int8_t hijriOffset = 0; // User-defined offset for Hijri date (in days)
   bool is24h = true; // 24-hour format by default
+};
+
+struct Credentials {
+  char ssid[32];  // 31 characters + null terminator
+  char password[64];  // 63 characters + null terminator
 };

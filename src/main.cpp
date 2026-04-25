@@ -21,10 +21,6 @@
 // Create display instance
 MD_Parola display = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 
-// WiFi Credentials (stored in EEPROM)
-String savedSSID = "";
-String savedPassword = "";
-
 // AsyncWebServer on Port 80
 AsyncWebServer server(80);
 
@@ -35,10 +31,11 @@ bool rebootReq = false;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, NTP_SERVER, 0, 60000); // Initial offset is UTC, will be updated from settings
 DisplaySettings settings;                           // Global settings struct
+Credentials credentials;                            // Global credentials struct
 
 // Variables
 char timeStr[20] = "00:00"; // HH:MM format with blinking colon + extra char for a/p indicator
-char dateStr[120] = "";    // For full date text
+char dateStr[120] = "";     // For full date text
 bool colonVisible = true;
 bool otaActive = false;
 bool showingDate = false;
@@ -71,7 +68,7 @@ void saveSettings();
 float calculateSunEvent(float lat, float lon, int dayOfYear, bool isSunrise, int timeOffset);
 void updateBrightness();
 void loadCredentials();
-void saveCredentials(String ssid, String password);
+void saveCredentials();
 void startAPMode();
 void handleAPMode();
 String htmlProcessor(const String &var);
@@ -108,7 +105,7 @@ void setup()
   updateBrightness();
   loadCredentials();
 
-  WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
+  WiFi.begin(credentials.ssid, credentials.password);
   unsigned long wifiStartTime = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - wifiStartTime < 20000)
   {
@@ -300,6 +297,19 @@ void saveSettings()
   EEPROM.commit();
 }
 
+void loadCredentials()
+{
+  EEPROM.get(0, credentials);
+  showStatusMessage("OK", PA_LEFT);
+}
+
+void saveCredentials()
+{
+  EEPROM.put(0, credentials);
+  EEPROM.commit();
+  showStatusMessage("OK", PA_LEFT);
+}
+
 // Returns hour of sunrise or sunset for given day of year
 float calculateSunEvent(float lat, float lon, int dayOfYear, bool isSunrise, int timeOffset)
 {
@@ -325,15 +335,26 @@ void updateBrightness()
   int currentHour = hour();
   int currentMinute = minute();
   float currentTime = currentHour + (currentMinute / 60.0);
+  float dayStart, nightStart;
 
   if (settings.brightnessMode)
   {
     // Auto mode: use sunrise/sunset times based on location
     int dayOfYear = day() + (month() - 1) * 30; // Approximation
-    float sunrise = calculateSunEvent(settings.latitude, settings.longitude, dayOfYear, true, settings.timeOffset);
-    float sunset = calculateSunEvent(settings.latitude, settings.longitude, dayOfYear, false, settings.timeOffset);
+    dayStart = calculateSunEvent(settings.latitude, settings.longitude, dayOfYear, true, settings.timeOffset);
+    nightStart = calculateSunEvent(settings.latitude, settings.longitude, dayOfYear, false, settings.timeOffset);
+  }
+  else
+  {
+    // Manual mode: use user-defined start hours
+    dayStart = (settings.dayStartHour + (settings.dayStartMinute / 60.0));
+    nightStart = (settings.nightStartHour + (settings.nightStartMinute / 60.0));
+  }
 
-    if (currentTime >= sunrise && currentTime < sunset)
+  // Handle wrap-around (e.g., day 6-18, or day 22-8)
+  if (dayStart < nightStart)
+  {
+    if (currentTime >= dayStart && currentTime < nightStart)
     {
       targetBrightness = settings.dayBrightness;
     }
@@ -344,88 +365,17 @@ void updateBrightness()
   }
   else
   {
-    // Manual mode: use user-defined start hours
-    int dayStart = settings.dayStartHour;
-    int nightStart = settings.nightStartHour;
-
-    // Handle wrap-around (e.g., day 6-18, or day 22-8)
-    if (dayStart < nightStart)
+    if (currentTime >= dayStart || currentTime < nightStart)
     {
-      if (currentHour >= dayStart && currentHour < nightStart)
-      {
-        targetBrightness = settings.dayBrightness;
-      }
-      else
-      {
-        targetBrightness = settings.nightBrightness;
-      }
+      targetBrightness = settings.dayBrightness;
     }
     else
     {
-      if (currentHour >= dayStart || currentHour < nightStart)
-      {
-        targetBrightness = settings.dayBrightness;
-      }
-      else
-      {
-        targetBrightness = settings.nightBrightness;
-      }
+      targetBrightness = settings.nightBrightness;
     }
   }
 
   display.setIntensity(targetBrightness);
-}
-
-void loadCredentials()
-{
-  savedSSID = "";
-  savedPassword = "";
-
-  // Read SSID (first 32 bytes)
-  for (int i = 0; i < 32; ++i)
-  {
-    char c = EEPROM.read(i);
-    if (c == 0)
-      break;
-    savedSSID += c;
-  }
-
-  // Read Password (next 64 bytes)
-  for (int i = 32; i < 96; ++i)
-  {
-    char c = EEPROM.read(i);
-    if (c == 0)
-      break;
-    savedPassword += c;
-  }
-
-  showStatusMessage("OK", PA_LEFT);
-}
-
-void saveCredentials(String ssid, String password)
-{
-  // Clear EEPROM
-  for (int i = 0; i < 96; ++i)
-  {
-    EEPROM.write(i, 0);
-  }
-
-  // Write SSID
-  for (unsigned int i = 0; i < ssid.length(); ++i)
-  {
-    EEPROM.write(i, ssid[i]);
-  }
-  EEPROM.write(ssid.length(), 0);
-
-  // Write Password
-  for (unsigned int i = 0; i < password.length(); ++i)
-  {
-    EEPROM.write(32 + i, password[i]);
-  }
-  EEPROM.write(32 + password.length(), 0);
-
-  EEPROM.commit();
-  showStatusMessage("OK", PA_LEFT);
 }
 
 // ========================================== //
@@ -656,26 +606,43 @@ void setupOTA()
 String htmlProcessor(const String &var)
 {
   if (var == "CURRENT_SSID")
-    return savedSSID.length() ? savedSSID : "Not set";
+  {
+    // Check if the first character is null (empty)
+    return (credentials.ssid[0] != '\0') ? String(credentials.ssid) : "Not set";
+  }
 
   if (var == "WIFI_STATUS")
   {
     if (WiFi.status() == WL_CONNECTED)
+    {
       return "Connected (" + WiFi.localIP().toString() + ")";
-    else if (savedSSID.length())
+    }
+    else if (credentials.ssid[0] != '\0')
+    {
       return "Saved but not connected";
+    }
     else
+    {
       return "No saved network";
+    }
   }
 
   if (var == "DAY_BRIGHTNESS")
     return String(settings.dayBrightness);
   if (var == "NIGHT_BRIGHTNESS")
     return String(settings.nightBrightness);
-  if (var == "DAY_START_HOUR")
-    return String(settings.dayStartHour);
-  if (var == "NIGHT_START_HOUR")
-    return String(settings.nightStartHour);
+  if (var == "DAY_START_TIME")
+  {
+    char timeBuffer[6];
+    snprintf(timeBuffer, sizeof(timeBuffer), "%02d:%02d", settings.dayStartHour, settings.dayStartMinute);
+    return String(timeBuffer);
+  }
+  if (var == "NIGHT_START_TIME")
+  {
+    char timeBuffer[6];
+    snprintf(timeBuffer, sizeof(timeBuffer), "%02d:%02d", settings.nightStartHour, settings.nightStartMinute);
+    return String(timeBuffer);
+  }
   if (var == "LATITUDE")
     return String(settings.latitude, 4);
   if (var == "LONGITUDE")
@@ -710,17 +677,22 @@ void setupWebServer()
   // serve static files
   server.serveStatic("/", LittleFS, "/");
 
-  server.on("/save", HTTP_POST, [](AsyncWebServerRequest *request)
+  server.on("/saveCredentials", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
             {
-    if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
-      String newSSID = request->getParam("ssid", true)->value();
-      String newPassword = request->getParam("password", true)->value();
+        JsonDocument doc;
+        // Using 'total' ensures we consider the expected length of the body
+        DeserializationError error = deserializeJson(doc, data, len);
 
-      saveCredentials(newSSID, newPassword);
-      request->send(200, "text/plain", "OK");
-      rebootReq = true;
+        if (!error) {
+        // Use strlcpy for safer copying than strncpy (it handles null-termination automatically)
+        strlcpy(credentials.ssid, doc["ssid"] | "", sizeof(credentials.ssid));
+        strlcpy(credentials.password, doc["password"] | "", sizeof(credentials.password));
+
+        saveCredentials();
+        request->send(200, "text/plain", "OK");
+        rebootReq = true;
     } else {
-      request->send(400, "text/plain", "Bad Request");
+        request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
     } });
 
   server.on("/show", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -747,11 +719,8 @@ void setupWebServer()
       request->send(400, "text/plain", "Missing 'message' parameter.");
     } });
 
-  server.on(
-
-      "/settings", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL,
-      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
-      {
+  server.on("/settings", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+            {
         JsonDocument doc;
         // Using 'total' ensures we consider the expected length of the body
         DeserializationError error = deserializeJson(doc, data, len);
@@ -788,8 +757,14 @@ void setupWebServer()
           if (doc["dSH"].is<int>())
             settings.dayStartHour = doc["dSH"];
 
-          if (doc["nSN"].is<int>())
-            settings.nightStartHour = doc["nSN"];
+          if (doc["dSM"].is<int>())
+            settings.dayStartMinute = doc["dSM"];
+
+          if (doc["nSH"].is<int>())
+            settings.nightStartHour = doc["nSH"];
+
+          if (doc["nSM"].is<int>())
+            settings.nightStartMinute = doc["nSM"];
 
           if (doc["showHjr"].is<bool>())
             settings.showHijri = doc["showHjr"];
@@ -820,8 +795,7 @@ void setupWebServer()
         else
         {
           request->send(400, "text/plain", "JSON Error");
-        }
-      });
+        } });
 
   server.on("/getsettings", HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -830,7 +804,9 @@ void setupWebServer()
     doc["dBrt"] = settings.dayBrightness;
     doc["ntBrt"] = settings.nightBrightness;
     doc["dSH"] = settings.dayStartHour;
-    doc["nSN"] = settings.nightStartHour;
+    doc["dSM"] = settings.dayStartMinute;
+    doc["nSH"] = settings.nightStartHour;
+    doc["nSM"] = settings.nightStartMinute;
     doc["lat"] = settings.latitude;
     doc["long"] = settings.longitude;
     doc["showHjr"] = settings.showHijri;
