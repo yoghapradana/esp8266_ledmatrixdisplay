@@ -81,7 +81,7 @@ function showMessage(message, type) {
 function saveWiFi() {
     const ssid = document.getElementById('ssid').value;
     const password = document.getElementById('password').value;
-    
+
     if (!ssid) return showMessage('Please enter an SSID', 'error');
 
     // Create a plain object
@@ -90,30 +90,48 @@ function saveWiFi() {
         password: password
     };
 
-    fetch('/saveCredentials', { 
-        method: 'POST', 
+    fetch('/saveCredentials', {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json' // Crucial: tells the ESP what to expect
         },
-        body: JSON.stringify(data) 
+        body: JSON.stringify(data)
     })
-    .then(response => {
-        if (!response.ok) throw new Error();
-        
-        showMessage('WiFi settings saved! Device rebooting...', 'success');
-        let count = 5;
-        const timer = setInterval(() => {
-            showMessage(`Rebooting in ${count--} seconds...`, 'success');
-            if (count < 0) { 
-                clearInterval(timer); 
-                location.reload(); 
-            }
-        }, 1000);
-    })
-    .catch(() => showMessage('Failed to save WiFi settings', 'error'));
+        .then(response => {
+            if (!response.ok) throw new Error();
+
+            showMessage('WiFi settings saved! Device rebooting...', 'success');
+            let count = 5;
+            const timer = setInterval(() => {
+                showMessage(`Rebooting in ${count--} seconds...`, 'success');
+                if (count < 0) {
+                    clearInterval(timer);
+                    location.reload();
+                }
+            }, 1000);
+        })
+        .catch(() => showMessage('Failed to save WiFi settings', 'error'));
 }
 
 function saveAllSettings() {
+
+    // validate all form inputs first
+    const inputs = document.querySelectorAll('input, select');
+
+    for (const input of inputs) {
+
+        // skip hidden/disabled inputs if needed
+        if (input.disabled || input.offsetParent === null) {
+            continue;
+        }
+
+        if (!input.checkValidity()) {
+            input.reportValidity();
+            input.focus();
+            return;
+        }
+    }
+
     const mode = document.getElementById('brightnessMode').value;
     const settings = {
         //auto=1 manual=0
@@ -129,15 +147,13 @@ function saveAllSettings() {
     }
 
     if (mode === 'manual') {
-        settings.dSH = parseInt(document.getElementById('dayStartTime').value.split(':')[0]);
-        settings.dSM = parseInt(document.getElementById('dayStartTime').value.split(':')[1]);
-        settings.nSH = parseInt(document.getElementById('nightStartTime').value.split(':')[0]);
-        settings.nSM = parseInt(document.getElementById('nightStartTime').value.split(':')[1]);
+        settings.dST = timeToMinutes(document.getElementById('dayStartTime').value);
+        settings.nST = timeToMinutes(document.getElementById('nightStartTime').value);
         settings.dBrt = parseInt(document.getElementById('dayBrightness').value);
         settings.ntBrt = parseInt(document.getElementById('nightBrightness').value);
     } else {
-        settings.lat = parseFloat(document.getElementById('latitude').value).toFixed(4);
-        settings.long = parseFloat(document.getElementById('longitude').value).toFixed(4);
+        settings.lat = parseFloat(document.getElementById('latitude').value);
+        settings.long = parseFloat(document.getElementById('longitude').value);
         settings.dBrt = parseInt(document.getElementById('dayBrightness').value);
         settings.ntBrt = parseInt(document.getElementById('nightBrightness').value);
     }
@@ -170,8 +186,8 @@ window.onload = function () {
         .then(data => {
             document.getElementById('brightnessMode').value = data.brtMode ? 'auto' : 'manual';
             // Add padStart(2, '0') to the Hour part
-document.getElementById('dayStartTime').value = `${String(data.dSH || 6).padStart(2, '0')}:${String(data.dSM || 0).padStart(2, '0')}`;
-document.getElementById('nightStartTime').value = `${String(data.nSH || 18).padStart(2, '0')}:${String(data.nSM || 0).padStart(2, '0')}`;
+            document.getElementById('dayStartTime').value = `${String(data.dSH || 6).padStart(2, '0')}:${String(data.dSM || 0).padStart(2, '0')}`;
+            document.getElementById('nightStartTime').value = `${String(data.nSH || 18).padStart(2, '0')}:${String(data.nSM || 0).padStart(2, '0')}`;
             document.getElementById('dayBrightness').value = data.dBrt || 8;
             document.getElementById('nightBrightness').value = data.ntBrt || 1;
 
@@ -207,30 +223,14 @@ function toggleHijriOffset() {
     }
 }
 
-function validate(el, isFloat) {
-    // 1. Store cursor position and original value
-    const start = el.selectionStart;
-    const oldVal = el.value;
-
-    // 2. Clean the string: allow only 0-9, one dot (if float), and one leading minus
-    let val = el.value.replace(isFloat ? /[^0-9.\-]/g : /[^0-9\-]/g, '');
-
-    // 3. Logic to prevent multiple dots
-    if (isFloat) {
-        const parts = val.split('.');
-        if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-    }
-
-    // 4. Logic to prevent multiple/misplaced minus signs
-    if (val.includes('-')) {
-        val = (val.startsWith('-') ? '-' : '') + val.replace(/-/g, '');
-    }
-
-    // 5. Update the field only if it's different to prevent loops
-    if (oldVal !== val) {
-        el.value = val;
-        // Restore cursor (adjusted if a character was removed)
-        const adj = val.length < oldVal.length ? -1 : 0;
-        el.setSelectionRange(start + adj, start + adj);
-    }
+function timeToMinutes(timeString) {
+    if (!timeString) return 0; // Default or fallback value
+    const [hh, mm] = timeString.split(':');
+    return (parseInt(hh, 10) * 60) + parseInt(mm, 10);
 }
+
+document.querySelectorAll('.num-input').forEach(input => {
+    input.addEventListener('blur', function () {
+        input.reportValidity();
+    });
+});

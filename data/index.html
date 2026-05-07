@@ -46,25 +46,46 @@
 
             <div class="form-group">
                 <label for="timeOffset">Time Zone Offset (seconds from UTC)</label>
-                <input type="text" id="timeOffset" name="timeOffset" value="%TIME_OFFSET%" step="3600"
-                    inputmode="numeric" oninput="validate(this, false); updateSunTimesUI()
+                <input type="number" class="num-input" id="timeOffset" name="timeOffset" min="-43200" max="50400"
+                    value="0" step="1" inputmode="numeric" oninput="updateSunTimesUI()
                 ">
-                <small>Current: %TIME_OFFSET% seconds</small>
+                <small>Current: %TIME_OFFSET% seconds / %TIME_OFFSET_HOURS% hours</small>
             </div>
 
             <div class="form-group">
                 <label>Quick Timezone Selection</label>
                 <select onchange="setQuickTimezone(this.value)">
-                    <option value="">-- Select timezone --</option>
-                    <option value="-28800">GMT-8 (PST)</option>
-                    <option value="-18000">GMT-5 (EST)</option>
-                    <option value="0">GMT+0 (UTC/London)</option>
-                    <option value="10800">GMT+3 (Moscow)</option>
-                    <option value="14400">GMT+4 (Dubai)</option>
-                    <option value="19800">GMT+5:30 (India)</option>
-                    <option value="25200" selected>GMT+7 (Jakarta/Bangkok)</option>
-                    <option value="28800">GMT+8 (Singapore/Kuala Lumpur)</option>
-                    <option value="32400">GMT+9 (Tokyo)</option>
+                    <option value="" disabled selected hidden>-- Select timezone --</option>
+
+                    <!-- Americas -->
+                    <option value="-36000">GMT-10 (Hawaii)</option>
+                    <option value="-32400">GMT-9 (Alaska)</option>
+                    <option value="-28800">GMT-8 (Los Angeles / PST)</option>
+                    <option value="-25200">GMT-7 (Denver / MST)</option>
+                    <option value="-21600">GMT-6 (Chicago / CST)</option>
+                    <option value="-18000">GMT-5 (New York / EST)</option>
+                    <option value="-14400">GMT-4 (Toronto / Santiago)</option>
+                    <option value="-10800">GMT-3 (São Paulo / Buenos Aires)</option>
+
+                    <!-- Europe / Africa -->
+                    <option value="0">GMT+0 (London / UTC)</option>
+                    <option value="3600">GMT+1 (Berlin / Paris / Rome)</option>
+                    <option value="7200">GMT+2 (Athens / Cairo / Johannesburg)</option>
+                    <option value="10800">GMT+3 (Moscow / Riyadh)</option>
+
+                    <!-- Middle East / Asia -->
+                    <option value="12600">GMT+3:30 (Tehran)</option>
+                    <option value="14400">GMT+4 (Dubai / Baku)</option>
+                    <option value="18000">GMT+5 (Karachi / Tashkent)</option>
+                    <option value="19800">GMT+5:30 (India / Sri Lanka)</option>
+                    <option value="20700">GMT+5:45 (Nepal)</option>
+                    <option value="21600">GMT+6 (Dhaka)</option>
+                    <option value="25200">GMT+7 (Jakarta / Bangkok)</option>
+                    <option value="28800">GMT+8 (Singapore / Beijing / Kuala Lumpur)</option>
+                    <option value="32400">GMT+9 (Tokyo / Seoul)</option>
+                    <option value="34200">GMT+9:30 (Adelaide)</option>
+                    <option value="36000">GMT+10 (Sydney / Melbourne)</option>
+                    <option value="43200">GMT+12 (Auckland / Fiji)</option>
                 </select>
             </div>
         </div>
@@ -86,14 +107,14 @@
                 <div class="manual-time-settings">
                     <div class="form-group">
                         <label for="dayStartTime">Day Mode Starts At</label>
-                        <input type="time" id="dayStartTime" name="dayStartTime" value="%DAY_START_TIME%"
+                        <input type="time" id="dayStartTime" name="dayStartTime" value="06:00"
                             inputmode="numeric">
                         <small>Time when day brightness starts</small>
                     </div>
 
                     <div class="form-group">
                         <label for="nightStartTime">Night Mode Starts At</label>
-                        <input type="time" id="nightStartTime" name="nightStartTime" value="%NIGHT_START_TIME%"
+                        <input type="time" id="nightStartTime" name="nightStartTime" value="18:00"
                             inputmode="numeric">
                         <small>Time when night brightness starts</small>
                     </div>
@@ -115,28 +136,28 @@
 
                 <div class="form-group">
                     <label for="latitude">Latitude</label>
-                    <input type="text" id="latitude" name="latitude" step="0.0001" value="%LATITUDE%"
-                        inputmode="numeric" oninput="validate(this, true); updateSunTimesUI()">
+                    <input type="number" class="num-input" id="latitude" name="latitude" step="0.0001" min="-90"
+                        max="90" value="0" inputmode="numeric" oninput="updateSunTimesUI()">
                     <small>Your location latitude (e.g., -7.2575 for Surabaya)</small>
                 </div>
 
                 <div class="form-group">
                     <label for="longitude">Longitude</label>
-                    <input type="text" id="longitude" name="longitude" step="0.0001" value="%LONGITUDE%"
-                        inputmode="numeric" oninput="validate(this, true); updateSunTimesUI()">
+                    <input type="number" class="num-input" id="longitude" name="longitude" step="0.0001" min="-180"
+                        max="180" value="0" inputmode="numeric" oninput="updateSunTimesUI()">
                     <small>Your location longitude (e.g., 112.7521 for Surabaya)</small>
                 </div>
             </div>
             <div class="brightness-controls">
                 <div class="form-group">
                     <label for="dayBrightness">Day Brightness</label>
-                    <input type="text" id="dayBrightness" name="dayBrightness" min="0" max="15" value="%DAY_BRIGHTNESS%"
-                        inputmode="numeric" oninput="validate(this, false)">
+                    <input type="number" class="num-input" id="dayBrightness" name="dayBrightness" min="0" max="15"
+                        value="0" step="1" inputmode="numeric" required>
                 </div>
                 <div class="form-group">
                     <label for="nightBrightness">Night Brightness</label>
-                    <input type="text" id="nightBrightness" name="nightBrightness" min="0" max="15"
-                        value="%NIGHT_BRIGHTNESS%" inputmode="numeric" oninput="validate(this, false)">
+                    <input type="number" class="num-input" id="nightBrightness" name="nightBrightness" min="0" max="15"
+                        value="0" step="1" inputmode="numeric" required>
                 </div>
             </div>
         </div>
@@ -155,7 +176,7 @@
             <div id="hijriOffsetWrapper" class="form-group"
                 style="display: none; margin-left: 30px; margin-top: -5px; margin-bottom: 15px;">
                 <label for="hijriOffset">Hijri Date Adjustment (Days)</label>
-                <input type="text" id="hijriOffset" name="hijriOffset" min="-2" max="2" value=%HIJRI_OFFSET%
+                <input type="number" class="num-input" id="hijriOffset" name="hijriOffset" min="-2" max="2" value="0" step="1"
                     inputmode="numeric" oninput="validate(this, false)">
                 <small>Adjust local moon sighting differences (-2 to +2 days)</small>
             </div>
