@@ -54,6 +54,7 @@ struct DisplaySettings {
   bool showHijri = true;
   bool showPasaran = true;
   bool is24h = true; // 24-hour format by default
+  char ntpServer[64] = NTP_SERVER; // Default NTP server, can be updated by user
 };
 
 struct Credentials {

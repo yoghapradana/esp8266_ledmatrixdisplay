@@ -26,9 +26,9 @@ AsyncWebServer server(80);
 
 WiFiUDP ntpUDP;
 // NTP Client with 3-hour update interval (in milliseconds)
-NTPClient timeClient(ntpUDP, NTP_SERVER, 0, 3 * 60 * 60 * 1000); // Initial offset is UTC, will be updated from settings
-DisplaySettings settings;										 // Global settings struct
-Credentials credentials;										 // Global credentials struct
+NTPClient timeClient(ntpUDP);
+DisplaySettings settings; // Global settings struct
+Credentials credentials;  // Global credentials struct
 
 // Variables
 char timeStr[8] = "00:00"; // HH:MM format with blinking colon + extra char for a/p indicator + null terminator
@@ -76,7 +76,6 @@ void loadCredentials();
 void saveCredentials();
 void startAPMode();
 void handleAPMode();
-String htmlProcessor(const String &var);
 void showClock();
 void showDate();
 void showCustomMessage();
@@ -118,6 +117,12 @@ void setup()
 	updateBrightness(settings.dayStartTime, settings.nightStartTime);
 	loadCredentials();
 
+	timeClient.setPoolServerName(settings.ntpServer);
+	timeClient.setTimeOffset(settings.timeOffset);
+	timeClient.setUpdateInterval(3 * 60 * 60 * 1000);
+
+	timeClient.begin();
+
 	WiFi.begin(credentials.ssid, credentials.password);
 	unsigned long wifiStartTime = millis();
 	while (WiFi.status() != WL_CONNECTED && millis() - wifiStartTime < 20000)
@@ -158,6 +163,14 @@ void setup()
 		}
 		retryCount++;
 		delay(1000);
+	}
+	// Last resort incase failure caused by blank NTP server address
+	// using default pool.ntp.org, but won't retry if the user set an invalid custom server
+	if (!ntpSyncSuccess)
+	{
+		timeClient.setPoolServerName("pool.ntp.org");
+		timeClient.forceUpdate();
+		ntpSyncSuccess = timeClient.isTimeSet();
 	}
 	// TimeLib Sync with NTP Client
 	setTime(timeClient.getEpochTime());
@@ -666,43 +679,6 @@ void setupOTA()
 	ArduinoOTA.begin();
 }
 
-String htmlProcessor(const String &var)
-{
-	if (var == "CURRENT_SSID")
-	{
-		// Check if the first character is null (empty)
-		return (credentials.ssid[0] != '\0') ? String(credentials.ssid) : "Not set";
-	}
-
-	if (var == "WIFI_STATUS")
-	{
-		if (WiFi.status() == WL_CONNECTED)
-		{
-			return "Connected (" + WiFi.localIP().toString() + ")";
-		}
-		else if (credentials.ssid[0] != '\0')
-		{
-			return "Saved but not connected";
-		}
-		else
-		{
-			return "No saved network";
-		}
-	}
-
-	if (var == "TIME_OFFSET")
-		return String(settings.timeOffset);
-
-	if (var == "TIME_OFFSET_HOURS")
-	{
-		float offsetHours = settings.timeOffset / 3600.0;
-		String s = (offsetHours >= 0 ? "+" : "");
-		return s + String(offsetHours, 1);
-	}
-
-	return String();
-}
-
 void setupWebServer()
 {
 	server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -710,10 +686,10 @@ void setupWebServer()
     // 1. File System (LittleFS)
     // 2. File Path ("/index.html")
     // 3. Content-Type + Charset ("text/html; charset=utf-8")
-    // 4. Download flag (false = display in browser, true = force download)
-    // 5. Template processor (htmlProcessor)
+    // 4. Download flag (false = display in browser, true = force download) - optional
+    // 5. Template processor (htmlProcessor) - optional, used for dynamic content replacement in HTML files (serverside rendering)
     
-    request->send(LittleFS, "/index.html", "text/html; charset=utf-8", false, htmlProcessor); });
+    request->send(LittleFS, "/index.html", "text/html; charset=utf-8"); });
 
 	// serve static files
 	server.serveStatic("/", LittleFS, "/");
@@ -769,9 +745,9 @@ void setupWebServer()
         if (!error)
         {
           // 1. Brightness Mode (Boolean)
-          if (doc["brtMode"].is<bool>())
+          if (doc["autoBrt"].is<bool>())
           {
-            settings.autoBrightness = doc["brtMode"];
+            settings.autoBrightness = doc["autoBrt"];
           }
 
           // 2. Numeric & Bool values
@@ -820,6 +796,12 @@ void setupWebServer()
             settings.is24h = doc["is24"];
           }
 
+		  if (doc["ntpSrv"].is<const char*>())
+		  {
+			  strlcpy(settings.ntpServer, doc["ntpSrv"], sizeof(settings.ntpServer));
+			  timeClient.setPoolServerName(settings.ntpServer);
+		  }
+
           // IMPORTANT: Send response BEFORE potentially heavy EEPROM/Update functions
           request->send(200, "text/plain", "OK");
           delay(10); // Small delay to ensure response is sent before we do heavy lifting
@@ -836,7 +818,26 @@ void setupWebServer()
 	server.on("/getsettings", HTTP_GET, [](AsyncWebServerRequest *request)
 			  {
     JsonDocument doc;
-    doc["brtMode"] = settings.autoBrightness;
+	doc["ssid"] =
+        credentials.ssid[0] != '\0'
+        ? credentials.ssid
+        : "Not set";
+	if (WiFi.status() == WL_CONNECTED)
+    {
+        doc["wifiStat"] ="Connected";
+		doc["ip"] = WiFi.localIP().toString();
+    }
+    else if (credentials.ssid[0] != '\0')
+    {
+        doc["wifiStat"] = "Saved but not connected";
+    }
+    else
+    {
+        doc["wifiStat"] = "No saved network";
+    }
+
+    doc["tmOft"] = settings.timeOffset;
+    doc["autoBrt"] = settings.autoBrightness;
     doc["dBrt"] = settings.dayBrightness;
     doc["ntBrt"] = settings.nightBrightness;
     doc["dSH"] = settings.dayStartTime / 60; // Convert back to hours for response
@@ -850,6 +851,7 @@ void setupWebServer()
     doc["hjrOft"] = settings.hijriOffset;
     doc["tmOft"] = settings.timeOffset;
     doc["is24"] = settings.is24h;
+    doc["ntpSrv"] = settings.ntpServer;
     String output;
     serializeJson(doc, output);
     request->send(200, "application/json", output); });

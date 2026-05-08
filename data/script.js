@@ -135,11 +135,12 @@ function saveAllSettings() {
     const mode = document.getElementById('brightnessMode').value;
     const settings = {
         //auto=1 manual=0
-        brtMode: mode === 'auto',
+        autoBrt: mode === 'auto',
         showHjr: document.getElementById('showHijri').checked,
         showPsr: document.getElementById('showPasaran').checked,
         tmOft: parseInt(document.getElementById('timeOffset').value),
-        is24: document.getElementById('is24h').checked
+        is24: document.getElementById('is24h').checked,
+        ntpSrv: document.getElementById('ntpServer').value
     };
 
     if (document.getElementById('showHijri').checked) {
@@ -184,12 +185,16 @@ window.onload = function () {
     fetch('/getsettings')
         .then(response => response.json())
         .then(data => {
-            document.getElementById('brightnessMode').value = data.brtMode ? 'auto' : 'manual';
+            document.getElementById('ssidCurrent').textContent = data.ssid || 'Not set';
+            document.getElementById('wifiStatus').textContent = data.wifiStat || 'Disconnected';
+            document.getElementById('ipAddress').textContent = data.ip || '0.0.0.0';
+            document.getElementById('timeOffsetCurrent').textContent = `Current: ${data.tmOft || 0} seconds / ${(data.tmOft ? data.tmOft / 3600 : 0).toFixed(2)} hours`;
+            document.getElementById('brightnessMode').value = data.autoBrt ? 'auto' : 'manual';
             // Add padStart(2, '0') to the Hour part
             document.getElementById('dayStartTime').value = `${String(data.dSH || 6).padStart(2, '0')}:${String(data.dSM || 0).padStart(2, '0')}`;
             document.getElementById('nightStartTime').value = `${String(data.nSH || 18).padStart(2, '0')}:${String(data.nSM || 0).padStart(2, '0')}`;
-            document.getElementById('dayBrightness').value = data.dBrt || 8;
-            document.getElementById('nightBrightness').value = data.ntBrt || 1;
+            document.getElementById('dayBrightness').value = data.dBrt ?? 8;
+            document.getElementById('nightBrightness').value = data.ntBrt ?? 1;
 
             document.getElementById('latitude').value = data.lat || -7.2575;
             document.getElementById('longitude').value = data.long || 112.7521;
@@ -199,7 +204,7 @@ window.onload = function () {
             document.getElementById('showPasaran').checked = data.showPsr !== false;
             document.getElementById('timeOffset').value = data.tmOft || 25200;
             document.getElementById('is24h').checked = data.is24 !== false;
-
+            document.getElementById('ntpServer').value = data.ntpSrv || 'pool.ntp.org';
             toggleBrightnessMode();
             updateSunTimesUI();
             toggleHijriOffset();

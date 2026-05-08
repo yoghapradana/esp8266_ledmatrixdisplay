@@ -20,8 +20,20 @@
         <div class="section">
             <h2>📡 WiFi Configuration</h2>
             <div class="status-box">
-                <p><strong>Current SSID:</strong> %CURRENT_SSID%</p>
-                <p><strong>Status:</strong> %WIFI_STATUS%</p>
+                <p>
+                    <strong>Current SSID:</strong>
+                    <span id="ssidCurrent">Loading...</span>
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    <span id="wifiStatus">Loading...</span>
+                </p>
+
+                <p>
+                    <strong>IP Address:</strong>
+                    <span id="ipAddress">Loading...</span>
+                </p>
             </div>
 
             <div class="form-group">
@@ -45,11 +57,16 @@
             </div>
 
             <div class="form-group">
+                <label for="ntpServer">NTP Server</label>
+                <input type="text" id="ntpServer" name="ntpServer" placeholder="Enter NTP Server" value="pool.ntp.org">
+            </div>
+
+            <div class="form-group">
                 <label for="timeOffset">Time Zone Offset (seconds from UTC)</label>
                 <input type="number" class="num-input" id="timeOffset" name="timeOffset" min="-43200" max="50400"
                     value="0" step="1" inputmode="numeric" oninput="updateSunTimesUI()
                 ">
-                <small>Current: %TIME_OFFSET% seconds / %TIME_OFFSET_HOURS% hours</small>
+                <small id="timeOffsetCurrent" name="timeOffsetCurrent">Current: 0 seconds / 0 hours</small>
             </div>
 
             <div class="form-group">
@@ -107,15 +124,13 @@
                 <div class="manual-time-settings">
                     <div class="form-group">
                         <label for="dayStartTime">Day Mode Starts At</label>
-                        <input type="time" id="dayStartTime" name="dayStartTime" value="06:00"
-                            inputmode="numeric">
+                        <input type="time" id="dayStartTime" name="dayStartTime" value="06:00" inputmode="numeric">
                         <small>Time when day brightness starts</small>
                     </div>
 
                     <div class="form-group">
                         <label for="nightStartTime">Night Mode Starts At</label>
-                        <input type="time" id="nightStartTime" name="nightStartTime" value="18:00"
-                            inputmode="numeric">
+                        <input type="time" id="nightStartTime" name="nightStartTime" value="18:00" inputmode="numeric">
                         <small>Time when night brightness starts</small>
                     </div>
                 </div>
@@ -176,8 +191,8 @@
             <div id="hijriOffsetWrapper" class="form-group"
                 style="display: none; margin-left: 30px; margin-top: -5px; margin-bottom: 15px;">
                 <label for="hijriOffset">Hijri Date Adjustment (Days)</label>
-                <input type="number" class="num-input" id="hijriOffset" name="hijriOffset" min="-2" max="2" value="0" step="1"
-                    inputmode="numeric" oninput="validate(this, false)">
+                <input type="number" class="num-input" id="hijriOffset" name="hijriOffset" min="-2" max="2" value="0"
+                    step="1" inputmode="numeric" oninput="validate(this, false)">
                 <small>Adjust local moon sighting differences (-2 to +2 days)</small>
             </div>
         </div>
